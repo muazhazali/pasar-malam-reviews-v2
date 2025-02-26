@@ -1,0 +1,11 @@
+---
+description: Best practices for using Firebase in web applications
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+# Your rule content
+
+- Use Firebase SDK modular imports for better tree-shaking
+- Implement proper error handling for Firebase operations
+- Utilize Firebase Authentication for user management
+- Set up Firestore rules for data security

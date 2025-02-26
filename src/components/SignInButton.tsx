@@ -1,7 +1,9 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export function SignInButton() {
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return user ? (
     <div className="flex items-center gap-4">
@@ -24,10 +26,10 @@ export function SignInButton() {
     </div>
   ) : (
     <button
-      onClick={() => signInWithGoogle()}
+      onClick={() => navigate('/login')}
       className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
     >
-      Sign In with Google
+      Sign In
     </button>
   );
 } 

@@ -1,0 +1,11 @@
+---
+description: Best practices for mapping with Leaflet
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+# Your rule content
+
+- Use `react-leaflet` for seamless React integration
+- Implement proper map initialization and cleanup
+- Utilize custom markers and popups for enhanced UX
+- Optimize map performance with proper zoom and tile management

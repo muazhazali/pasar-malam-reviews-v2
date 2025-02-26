@@ -1,0 +1,11 @@
+---
+description: Best practices for React component development and state management
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+# Your rule content
+
+- Use functional components with hooks
+- Keep components small and focused
+- Utilize memoization for performance optimization
+- Implement proper prop type validation

@@ -1,0 +1,11 @@
+---
+description: Best practices for routing in React applications
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+# Your rule content
+
+- Use nested routes for better organization
+- Implement dynamic routing for scalability
+- Use the `useNavigate` hook for programmatic navigation
+- Handle 404 errors with a catch-all route

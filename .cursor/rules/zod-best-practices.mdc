@@ -1,0 +1,11 @@
+---
+description: Best practices for schema validation and type inference with Zod
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+# Your rule content
+
+- Define schemas for data validation and type inference
+- Use `z.infer` for type-safe data handling
+- Implement custom validation logic with `refine`
+- Utilize `z.union` for handling multiple schema types

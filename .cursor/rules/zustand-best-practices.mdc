@@ -1,0 +1,11 @@
+---
+description: Best practices for state management with Zustand
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+# Your rule content
+
+- Create separate stores for different domains
+- Use middleware for devtools and persistence
+- Implement proper state updates with immer
+- Utilize selectors for efficient state access

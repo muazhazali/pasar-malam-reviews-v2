@@ -1,0 +1,14 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*", "/css/*", "/js/*", "/*.ico", "/*.png"]
+  },
+  "mimeTypes": {
+    ".json": "text/json"
+  },
+  "globalHeaders": {
+    "Content-Security-Policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' *.firebaseapp.com *.googleapis.com *.google.com *.gstatic.com data: blob: https:; img-src 'self' data: blob: https:;",
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff"
+  }
+} 

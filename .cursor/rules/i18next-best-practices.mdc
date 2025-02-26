@@ -1,0 +1,11 @@
+---
+description: Best practices for internationalization with i18next
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+# Your rule content
+
+- Use `useTranslation` hook for component-level translations
+- Implement proper namespace management for large projects
+- Utilize interpolation for dynamic content
+- Set up proper fallback languages and error handling

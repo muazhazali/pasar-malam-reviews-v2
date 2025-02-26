@@ -4,14 +4,20 @@ import {
   GoogleAuthProvider, 
   signInWithPopup,
   signOut as firebaseSignOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { checkIsAdmin } from '@/lib/admin';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  createUserWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -28,10 +34,17 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      if (user) {
+        const adminStatus = await checkIsAdmin(user.uid);
+        setIsAdmin(adminStatus);
+      } else {
+        setIsAdmin(false);
+      }
       setLoading(false);
     });
 
@@ -44,6 +57,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error('Error signing in with Google:', error);
+      throw error;
+    }
+  };
+
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error('Error signing in with email:', error);
+      throw error;
+    }
+  };
+
+  const createUserWithEmail = async (email: string, password: string) => {
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
     }
   };
 
@@ -52,13 +84,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await firebaseSignOut(auth);
     } catch (error) {
       console.error('Error signing out:', error);
+      throw error;
     }
   };
 
   const value = {
     user,
     loading,
+    isAdmin,
     signInWithGoogle,
+    signInWithEmail,
+    createUserWithEmail,
     signOut,
   };
 

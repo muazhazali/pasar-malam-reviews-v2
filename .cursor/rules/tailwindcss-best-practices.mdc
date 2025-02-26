@@ -1,0 +1,11 @@
+---
+description: Best practices for utility-first CSS with Tailwind
+globs: **/*.{ts,tsx,js,jsx,css}
+---
+
+# Your rule content
+
+- Use utility classes for styling components
+- Create custom utilities for reusable styles
+- Implement responsive design using Tailwind's breakpoints
+- Use `tailwind-merge` for efficient class merging
