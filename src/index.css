@@ -63,6 +63,7 @@
   height: 100%;
   width: 100%;
   border-radius: 0.5rem;
+  z-index: 0;
 }
 
 .leaflet-div-icon {
@@ -89,4 +90,18 @@
 
 .leaflet-control-zoom a {
   @apply text-foreground hover:bg-muted;
+}
+
+/* Override Leaflet's default z-index values */
+.leaflet-pane {
+  z-index: 1 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 2 !important;
+}
+
+.leaflet-popup {
+  z-index: 3 !important;
 }

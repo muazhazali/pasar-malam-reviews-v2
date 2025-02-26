@@ -17,7 +17,7 @@ export function SignInButton() {
       </div>
       <button
         onClick={() => signOut()}
-        className="rounded-md bg-secondary px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary/80"
+        className="rounded-xl bg-secondary px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary/80"
       >
         Sign Out
       </button>
@@ -25,7 +25,7 @@ export function SignInButton() {
   ) : (
     <button
       onClick={() => signInWithGoogle()}
-      className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+      className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
     >
       Sign In with Google
     </button>

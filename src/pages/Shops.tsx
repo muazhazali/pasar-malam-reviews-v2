@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Shop } from '@/types/shop';
 import { ShopMap } from '@/components/Map/ShopMap';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Star } from 'lucide-react';
 
 const MOCK_SHOPS: Shop[] = [
   {
@@ -87,17 +89,30 @@ export function Shops() {
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredShops.map(shop => (
-            <div key={shop.id} className="rounded-xl border bg-card p-6 hover:bg-accent/50 transition-colors">
-              <h2 className="text-xl font-semibold">{shop.name}</h2>
+            <div
+              key={shop.id}
+              className="group rounded-xl border bg-card p-6 transition-all hover:bg-accent/50 hover:shadow-md"
+            >
+              <h2 className="text-xl font-semibold group-hover:text-primary">{shop.name}</h2>
               <p className="mt-2 text-muted-foreground">{shop.description}</p>
               <div className="mt-4 flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{shop.category}</span>
                 <div className="flex items-center space-x-2">
+                  <Star className="h-4 w-4 fill-primary text-primary" />
                   <span className="font-medium">{shop.rating}</span>
                   <span className="text-sm text-muted-foreground">({shop.reviewCount} reviews)</span>
                 </div>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">{shop.address}</p>
+              <div className="mt-6 flex justify-end">
+                <Link
+                  to={`/shops/${shop.id}`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  View Details
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
           ))}
         </div>

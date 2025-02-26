@@ -8,6 +8,10 @@ export interface Shop {
   rating: number;
   reviewCount: number;
   verified: boolean;
+  operatingHours?: string;
+  phone?: string;
+  website?: string;
+  photos?: string[];
   ownerId?: string;
   createdAt: string;
   updatedAt: string;

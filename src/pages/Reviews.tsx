@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { Search, Star, SlidersHorizontal, X } from 'lucide-react';
 
 interface Review {
   id: string;
@@ -9,6 +10,13 @@ interface Review {
   rating: number;
   content: string;
   date: string;
+  location?: {
+    lat: number;
+    lng: number;
+    address: string;
+  };
+  category: string;
+  distance?: number;
 }
 
 const MOCK_REVIEWS: Review[] = [
@@ -21,6 +29,12 @@ const MOCK_REVIEWS: Review[] = [
     rating: 4.5,
     content: 'Amazing food! The traditional flavors are perfectly preserved while adding a modern touch. Must try their signature dishes.',
     date: '2024-02-25',
+    category: 'Food',
+    location: {
+      lat: 3.1390,
+      lng: 101.6869,
+      address: 'Kuala Lumpur City Centre'
+    }
   },
   {
     id: '2',
@@ -31,6 +45,12 @@ const MOCK_REVIEWS: Review[] = [
     rating: 4.0,
     content: 'Great selection of trendy clothes. The staff is very helpful and prices are reasonable.',
     date: '2024-02-24',
+    category: 'Fashion',
+    location: {
+      lat: 3.1421,
+      lng: 101.6867,
+      address: 'Bukit Bintang'
+    }
   },
   {
     id: '3',
@@ -41,52 +61,240 @@ const MOCK_REVIEWS: Review[] = [
     rating: 5.0,
     content: 'Excellent service and competitive prices. They have all the latest gadgets and the staff is very knowledgeable.',
     date: '2024-02-23',
+    category: 'Electronics',
+    location: {
+      lat: 3.1380,
+      lng: 101.6871,
+      address: 'Pavilion KL'
+    }
   },
 ];
 
-export function Reviews() {
-  const [sortBy, setSortBy] = useState<'date' | 'rating'>('date');
+const CATEGORIES = ['All', 'Food', 'Fashion', 'Electronics'];
+const SORT_OPTIONS = [
+  { value: 'date-desc', label: 'Newest First' },
+  { value: 'date-asc', label: 'Oldest First' },
+  { value: 'rating-desc', label: 'Highest Rating' },
+  { value: 'rating-asc', label: 'Lowest Rating' }
+];
+const RATING_FILTERS = [5, 4, 3, 2, 1];
 
-  const sortedReviews = [...MOCK_REVIEWS].sort((a, b) => {
-    if (sortBy === 'date') {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+export function Reviews() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState('date-desc');
+  const [showFilters, setShowFilters] = useState(false);
+  const [userLocation, setUserLocation] = useState<GeolocationPosition | null>(null);
+
+  // Get user's location
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => setUserLocation(position),
+        (error) => console.error('Error getting location:', error)
+      );
     }
-    return b.rating - a.rating;
-  });
+  };
+
+  // Calculate distance between two points using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  // Filter and sort reviews
+  const filteredAndSortedReviews = useMemo(() => {
+    return MOCK_REVIEWS
+      .filter(review => {
+        const matchesSearch = 
+          review.shopName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          review.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          review.userName.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesCategory = selectedCategory === 'All' || review.category === selectedCategory;
+        const matchesRating = !selectedRating || Math.floor(review.rating) === selectedRating;
+        
+        return matchesSearch && matchesCategory && matchesRating;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'date-desc':
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+          case 'date-asc':
+            return new Date(a.date).getTime() - new Date(b.date).getTime();
+          case 'rating-desc':
+            return b.rating - a.rating;
+          case 'rating-asc':
+            return a.rating - b.rating;
+          default:
+            return 0;
+        }
+      })
+      .map(review => {
+        if (userLocation && review.location) {
+          const distance = calculateDistance(
+            userLocation.coords.latitude,
+            userLocation.coords.longitude,
+            review.location.lat,
+            review.location.lng
+          );
+          return { ...review, distance };
+        }
+        return review;
+      });
+  }, [searchTerm, selectedCategory, selectedRating, sortBy, userLocation]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-      <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">Reviews</h1>
-          <select
-            className="w-full sm:w-auto rounded-md border px-4 py-2"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'date' | 'rating')}
-          >
-            <option value="date">Sort by Date</option>
-            <option value="rating">Sort by Rating</option>
-          </select>
+      <div className="space-y-6">
+        {/* Header and Search */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold tracking-tight">Reviews</h1>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-accent"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+            </button>
+          </div>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search reviews by shop name, content, or reviewer..."
+              className="w-full rounded-lg border pl-10 pr-4 py-2 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
+        {/* Filters Panel */}
+        {showFilters && (
+          <div className="rounded-lg border bg-card p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">Filters & Sort</h2>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="rounded-full p-1 hover:bg-accent"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Category Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Category</label>
+                <select
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  {CATEGORIES.map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Rating Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Rating</label>
+                <div className="flex gap-2">
+                  {RATING_FILTERS.map(rating => (
+                    <button
+                      key={rating}
+                      onClick={() => setSelectedRating(selectedRating === rating ? null : rating)}
+                      className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-sm ${
+                        selectedRating === rating ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+                      }`}
+                    >
+                      {rating}
+                      <Star className={`h-3 w-3 ${selectedRating === rating ? 'fill-primary-foreground' : ''}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sort Options */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sort By</label>
+                <select
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  {SORT_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Location Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Location</label>
+                <button
+                  onClick={getUserLocation}
+                  className="w-full rounded-lg border px-3 py-2 text-sm hover:bg-accent"
+                >
+                  {userLocation ? 'Update Location' : 'Use My Location'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reviews Grid */}
         <div className="grid gap-6">
-          {sortedReviews.map(review => (
+          {filteredAndSortedReviews.map(review => (
             <div key={review.id} className="rounded-xl border bg-card p-6 hover:bg-accent/50 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold">{review.shopName}</h2>
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium">{review.rating}</span>
-                  <span className="text-sm text-muted-foreground">stars</span>
+                <div>
+                  <h2 className="text-xl font-semibold">{review.shopName}</h2>
+                  <p className="text-sm text-muted-foreground">{review.category}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center">
+                    <Star className="h-5 w-5 fill-primary text-primary" />
+                    <span className="ml-1 font-medium">{review.rating}</span>
+                  </div>
+                  {review.distance && (
+                    <span className="text-sm text-muted-foreground">
+                      {review.distance.toFixed(1)} km away
+                    </span>
+                  )}
                 </div>
               </div>
               <p className="mt-4 text-muted-foreground">{review.content}</p>
               <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-muted-foreground">
                 <span>By {review.userName}</span>
-                <span>{new Date(review.date).toLocaleDateString()}</span>
+                <div className="flex items-center gap-4">
+                  {review.location && (
+                    <span>{review.location.address}</span>
+                  )}
+                  <span>{new Date(review.date).toLocaleDateString()}</span>
+                </div>
               </div>
             </div>
           ))}
         </div>
+
+        {filteredAndSortedReviews.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-lg text-muted-foreground">No reviews found matching your criteria.</p>
+          </div>
+        )}
       </div>
     </div>
   );
