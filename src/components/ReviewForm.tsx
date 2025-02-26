@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Star } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface ReviewFormProps {
-  shopId: string;
   onSubmit: (review: {
     rating: number;
     content: string;
@@ -11,62 +9,46 @@ interface ReviewFormProps {
   onCancel: () => void;
 }
 
-export function ReviewForm({ shopId, onSubmit, onCancel }: ReviewFormProps) {
-  const { user } = useAuth();
+export function ReviewForm({ onSubmit, onCancel }: ReviewFormProps) {
   const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      alert('Please sign in to submit a review');
-      return;
-    }
-    if (rating === 0) {
-      alert('Please select a rating');
-      return;
-    }
-    if (!content.trim()) {
-      alert('Please write a review');
-      return;
-    }
+    if (isSubmitting) return;
 
-    setIsSubmitting(true);
     try {
+      setIsSubmitting(true);
       await onSubmit({
         rating,
-        content: content.trim(),
+        content,
       });
+      // Reset form
+      setRating(0);
+      setContent('');
     } catch (error) {
       console.error('Error submitting review:', error);
-      alert('Failed to submit review. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Rating Stars */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Rating</label>
-        <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map((star) => (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Rating</label>
+        <div className="flex gap-1 mt-1">
+          {[1, 2, 3, 4, 5].map((value) => (
             <button
-              key={star}
+              key={value}
               type="button"
-              onClick={() => setRating(star)}
-              onMouseEnter={() => setHoverRating(star)}
-              onMouseLeave={() => setHoverRating(0)}
-              className="p-1"
+              onClick={() => setRating(value)}
+              className="text-2xl focus:outline-none"
             >
               <Star
-                className={`h-8 w-8 ${
-                  star <= (hoverRating || rating)
-                    ? 'fill-primary text-primary'
-                    : 'text-muted-foreground'
+                className={`h-6 w-6 ${
+                  value <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
                 }`}
               />
             </button>
@@ -74,37 +56,33 @@ export function ReviewForm({ shopId, onSubmit, onCancel }: ReviewFormProps) {
         </div>
       </div>
 
-      {/* Review Text */}
-      <div className="space-y-2">
-        <label htmlFor="content" className="text-sm font-medium">
-          Your Review
+      <div>
+        <label htmlFor="content" className="block text-sm font-medium text-gray-700">
+          Review
         </label>
         <textarea
           id="content"
+          rows={4}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="w-full min-h-[100px] rounded-lg border bg-background px-3 py-2 text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
           placeholder="Write your review here..."
-          maxLength={1000}
+          required
         />
-        <div className="text-xs text-muted-foreground">
-          {content.length}/1000 characters
-        </div>
       </div>
 
-      {/* Submit Buttons */}
-      <div className="flex justify-end gap-4">
+      <div className="flex gap-2 justify-end">
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-accent"
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
         >
           Cancel
         </button>
         <button
           type="submit"
-          disabled={isSubmitting}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          disabled={isSubmitting || !rating || !content}
+          className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50"
         >
           {isSubmitting ? 'Submitting...' : 'Submit Review'}
         </button>

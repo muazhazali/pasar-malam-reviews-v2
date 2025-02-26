@@ -6,7 +6,7 @@ import { Reviews } from './pages/Reviews';
 import { ShopDetails } from './pages/ShopDetails';
 import { WriteReview } from './pages/WriteReview';
 import { AuthProvider } from './contexts/AuthContext';
-import LoginPage from './pages/login';
+import { LoginPage } from './pages/Login';
 
 function App() {
   return (

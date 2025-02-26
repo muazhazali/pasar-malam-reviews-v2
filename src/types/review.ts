@@ -8,17 +8,15 @@ export interface Review {
   userPhotoURL?: string;
   rating: number;
   content: string;
-  status: 'pending' | 'approved' | 'rejected';
-  moderationNote?: string;
-  votes: {
-    upvotes: number;
-    downvotes: number;
-    userVotes: Record<string, 'up' | 'down'>;  // userId -> vote type
-  };
   location?: {
     lat: number;
     lng: number;
-    address: string;
+  };
+  status: 'pending' | 'approved' | 'rejected';
+  votes: {
+    upvotes: number;
+    downvotes: number;
+    userVotes: Record<string, 'up' | 'down'>;
   };
   createdAt: string;
   updatedAt: string;
