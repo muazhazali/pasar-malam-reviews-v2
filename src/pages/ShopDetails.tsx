@@ -36,34 +36,38 @@ const MOCK_REVIEWS: Review[] = [
   {
     id: '1',
     shopId: '1',
+    shopName: 'Delicious Corner',
+    category: 'Food',
     userId: 'user1',
     userName: 'John Doe',
-    rating: 5,
-    content: 'Amazing food and great service! The traditional flavors are perfectly preserved while adding a modern touch. Must try their signature dishes.',
+    rating: 4,
+    content: 'Great food and service!',
     status: 'approved',
     votes: {
-      upvotes: 12,
-      downvotes: 2,
+      upvotes: 5,
+      downvotes: 1,
       userVotes: {},
     },
-    createdAt: '2024-02-25',
-    updatedAt: '2024-02-25',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
     id: '2',
     shopId: '1',
+    shopName: 'Delicious Corner',
+    category: 'Food',
     userId: 'user2',
     userName: 'Jane Smith',
-    rating: 4,
-    content: 'Good food and nice ambiance. The prices are reasonable for the quality you get. Would recommend trying their special dishes.',
+    rating: 5,
+    content: 'Amazing experience!',
     status: 'approved',
     votes: {
-      upvotes: 8,
-      downvotes: 1,
+      upvotes: 3,
+      downvotes: 0,
       userVotes: {},
     },
-    createdAt: '2024-02-24',
-    updatedAt: '2024-02-24',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
 ];
 
@@ -72,24 +76,22 @@ export function ShopDetails() {
   const { user } = useAuth();
   const [selectedPhoto, setSelectedPhoto] = useState(0);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
-  const [reviews, setReviews] = useState(MOCK_REVIEWS);
+  const [reviews, setReviews] = useState<Review[]>(MOCK_REVIEWS);
 
   // In a real app, we would fetch the shop data based on the ID
   const shop = MOCK_SHOP;
 
-  const handleReviewSubmit = async (review: {
-    rating: number;
-    content: string;
-  }) => {
+  const handleSubmitReview = async (review: { rating: number; content: string }) => {
     if (!user) return;
 
-    // Mock review creation
     const newReview: Review = {
-      id: Date.now().toString(),
-      shopId: shop.id,
+      id: Math.random().toString(),
+      shopId: '1',
+      shopName: 'Delicious Corner',
+      category: 'Food',
       userId: user.uid,
       userName: user.displayName || 'Anonymous',
-      userPhotoURL: user.photoURL || undefined,
+      userPhotoURL: user.photoURL,
       rating: review.rating,
       content: review.content,
       status: 'pending',
@@ -102,11 +104,11 @@ export function ShopDetails() {
       updatedAt: new Date().toISOString(),
     };
 
-    // In a real app, this would be handled by the backend
-    setReviews(prev => [newReview, ...prev]);
+    setReviews(prev => [...prev, newReview]);
+    setIsReviewDialogOpen(false);
   };
 
-  const handleVote = async (reviewId: string, voteType: 'up' | 'down') => {
+  const handleVote = async (type: 'up' | 'down', reviewId: string) => {
     if (!user) return;
 
     setReviews(prev => prev.map(review => {
@@ -115,19 +117,16 @@ export function ShopDetails() {
       const currentVote = review.votes.userVotes[user.uid];
       const newVotes = { ...review.votes };
 
-      // Remove previous vote if exists
       if (currentVote) {
         if (currentVote === 'up') newVotes.upvotes--;
         if (currentVote === 'down') newVotes.downvotes--;
       }
 
-      // Add new vote if different from current vote
-      if (currentVote !== voteType) {
-        if (voteType === 'up') newVotes.upvotes++;
-        if (voteType === 'down') newVotes.downvotes++;
-        newVotes.userVotes[user.uid] = voteType;
+      if (currentVote !== type) {
+        if (type === 'up') newVotes.upvotes++;
+        if (type === 'down') newVotes.downvotes++;
+        newVotes.userVotes[user.uid] = type;
       } else {
-        // If same vote, remove the vote
         delete newVotes.userVotes[user.uid];
       }
 
@@ -245,18 +244,34 @@ export function ShopDetails() {
                     <span className="font-medium">{review.userName}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Star className="h-5 w-5 fill-primary text-primary" />
-                    <span>{review.rating}</span>
+                    <VoteButton
+                      type="up"
+                      count={review.votes.upvotes}
+                      userVote={user ? review.votes.userVotes[user.uid] : undefined}
+                      onVote={(type) => handleVote(type, review.id)}
+                    />
+                    <VoteButton
+                      type="down"
+                      count={review.votes.downvotes}
+                      userVote={user ? review.votes.userVotes[user.uid] : undefined}
+                      onVote={(type) => handleVote(type, review.id)}
+                    />
                   </div>
                 </div>
-                <p className="mt-4 text-muted-foreground">{review.content}</p>
-                <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-                  <span>{new Date(review.createdAt).toLocaleDateString()}</span>
-                  <VoteButton
-                    reviewId={review.id}
-                    votes={review.votes}
-                    onVote={(type) => handleVote(review.id, type)}
-                  />
+                <div className="mt-4">
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`text-sm ${
+                          i < review.rating ? 'text-yellow-400' : 'text-gray-300'
+                        }`}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-2">{review.content}</p>
                 </div>
               </div>
             ))}
@@ -269,7 +284,7 @@ export function ShopDetails() {
         shopName={shop.name}
         isOpen={isReviewDialogOpen}
         onClose={() => setIsReviewDialogOpen(false)}
-        onSubmit={handleReviewSubmit}
+        onSubmit={handleSubmitReview}
       />
     </div>
   );

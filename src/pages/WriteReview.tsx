@@ -51,6 +51,7 @@ export function WriteReview() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedShopId, setSelectedShopId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect to login if not authenticated
   if (!user) {
@@ -74,24 +75,23 @@ export function WriteReview() {
 
   const selectedShop = MOCK_SHOPS.find(shop => shop.id === selectedShopId);
 
-  const handleSubmit = async (review: {
-    rating: number;
-    content: string;
-    photos: File[];
-  }) => {
+  const handleSubmit = async (review: { rating: number; content: string }) => {
+    if (!user) {
+      alert('Please sign in to submit a review');
+      return;
+    }
+
     try {
-      // This will be replaced with actual submission logic later
-      console.log('Submitting review:', {
-        ...review,
-        shopId: selectedShopId,
-        userId: user.uid,
-        userName: user.displayName,
-      });
+      setIsSubmitting(true);
+      // Add your review submission logic here
+      console.log('Submitting review:', review);
       
       // Navigate back to the shop's page or reviews page
       navigate(selectedShopId ? `/shops/${selectedShopId}` : '/reviews');
     } catch (error) {
       console.error('Error submitting review:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

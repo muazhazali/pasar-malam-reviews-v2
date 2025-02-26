@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Star, SlidersHorizontal, X } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { VoteButton } from '@/components/VoteButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { Review } from '@/types/review';
@@ -73,19 +73,16 @@ export function Reviews() {
       const currentVote = review.votes.userVotes[user.uid];
       const newVotes = { ...review.votes };
 
-      // Remove previous vote if exists
       if (currentVote) {
         if (currentVote === 'up') newVotes.upvotes--;
         if (currentVote === 'down') newVotes.downvotes--;
       }
 
-      // Add new vote if different from current vote
       if (currentVote !== voteType) {
         if (voteType === 'up') newVotes.upvotes++;
         if (voteType === 'down') newVotes.downvotes++;
         newVotes.userVotes[user.uid] = voteType;
       } else {
-        // If same vote, remove the vote
         delete newVotes.userVotes[user.uid];
       }
 
@@ -96,7 +93,6 @@ export function Reviews() {
     }));
   };
 
-  // Filter and sort reviews
   const filteredAndSortedReviews = useMemo(() => {
     return reviews
       .filter(review => {
@@ -132,8 +128,88 @@ export function Reviews() {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">Recent Reviews</h1>
+      
+      {/* Search and filters */}
+      <div className="mb-6 space-y-4">
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search reviews..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            <Star className="h-5 w-5" />
+          </button>
+        </div>
+
+        {showFilters && (
+          <div className="space-y-4 p-4 bg-gray-50 rounded-md">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`px-3 py-1 text-sm rounded-full ${
+                      selectedCategory === category
+                        ? 'bg-primary text-white'
+                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+              <div className="flex flex-wrap gap-2">
+                {RATING_FILTERS.map((rating) => (
+                  <button
+                    key={rating}
+                    onClick={() => setSelectedRating(selectedRating === rating ? null : rating)}
+                    className={`px-3 py-1 text-sm rounded-full ${
+                      selectedRating === rating
+                        ? 'bg-primary text-white'
+                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {rating} ★
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sort by</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Reviews list */}
       <div className="space-y-6">
-        {reviews.map(review => (
+        {filteredAndSortedReviews.map(review => (
           <div
             key={review.id}
             className="rounded-lg border bg-card p-6 shadow-sm"

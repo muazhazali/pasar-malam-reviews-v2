@@ -13,20 +13,15 @@ interface ReviewDialogProps {
 }
 
 export function ReviewDialog({ isOpen, onClose, onSubmit }: ReviewDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const handleSubmit = async (review: {
     rating: number;
     content: string;
   }) => {
     try {
-      setIsSubmitting(true);
       await onSubmit(review);
       onClose();
     } catch (error) {
       console.error('Error submitting review:', error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
