@@ -4,7 +4,7 @@ import { Home } from './pages/Home';
 import { Shops } from './pages/Shops';
 import { Reviews } from './pages/Reviews';
 import { ShopDetails } from './pages/ShopDetails';
-import { SubmitReview } from './pages/SubmitReview';
+import { WriteReview } from './pages/WriteReview';
 import { AuthProvider } from './contexts/AuthContext';
 
 function App() {
@@ -17,7 +17,7 @@ function App() {
             <Route path="/shops" element={<Shops />} />
             <Route path="/shops/:id" element={<ShopDetails />} />
             <Route path="/reviews" element={<Reviews />} />
-            <Route path="/reviews/new" element={<SubmitReview />} />
+            <Route path="/write-review" element={<WriteReview />} />
           </Routes>
         </Layout>
       </Router>

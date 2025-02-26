@@ -17,9 +17,9 @@ export function Home() {
         <section className="w-full grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
           <Link 
             to="/shops" 
-            className="group relative rounded-xl border bg-card p-8 transition-all hover:bg-accent hover:shadow-md"
+            className="group relative rounded-xl border bg-card p-8 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-black group-hover:bg-black group-hover:text-white dark:bg-zinc-800 dark:text-white dark:group-hover:bg-white dark:group-hover:text-black">
               <Store className="h-7 w-7" />
             </div>
             <h2 className="mt-5 text-2xl font-semibold">Browse Shops</h2>
@@ -33,9 +33,9 @@ export function Home() {
           
           <Link 
             to="/reviews" 
-            className="group relative rounded-xl border bg-card p-8 transition-all hover:bg-accent hover:shadow-md"
+            className="group relative rounded-xl border bg-card p-8 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-black group-hover:bg-black group-hover:text-white dark:bg-zinc-800 dark:text-white dark:group-hover:bg-white dark:group-hover:text-black">
               <BookOpen className="h-7 w-7" />
             </div>
             <h2 className="mt-5 text-2xl font-semibold">Read Reviews</h2>
@@ -48,10 +48,10 @@ export function Home() {
           </Link>
           
           <Link 
-            to="/reviews" 
-            className="group relative rounded-xl border bg-card p-8 transition-all hover:bg-accent hover:shadow-md sm:col-span-2 lg:col-span-1"
+            to="/write-review" 
+            className="group relative rounded-xl border bg-card p-8 transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800 sm:col-span-2 lg:col-span-1"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-black group-hover:bg-black group-hover:text-white dark:bg-zinc-800 dark:text-white dark:group-hover:bg-white dark:group-hover:text-black">
               <Share2 className="h-7 w-7" />
             </div>
             <h2 className="mt-5 text-2xl font-semibold">Share Experiences</h2>
