@@ -1,23 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Search, Star, SlidersHorizontal, X } from 'lucide-react';
-
-interface Review {
-  id: string;
-  shopId: string;
-  shopName: string;
-  userId: string;
-  userName: string;
-  rating: number;
-  content: string;
-  date: string;
-  location?: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  category: string;
-  distance?: number;
-}
+import { VoteButton } from '@/components/VoteButton';
+import { useAuth } from '@/contexts/AuthContext';
+import { Review } from '@/types/review';
 
 const MOCK_REVIEWS: Review[] = [
   {
@@ -34,7 +19,15 @@ const MOCK_REVIEWS: Review[] = [
       lat: 3.1390,
       lng: 101.6869,
       address: 'Kuala Lumpur City Centre'
-    }
+    },
+    status: 'approved',
+    votes: {
+      upvotes: 12,
+      downvotes: 2,
+      userVotes: {},
+    },
+    createdAt: '2024-02-25',
+    updatedAt: '2024-02-25',
   },
   {
     id: '2',
@@ -50,7 +43,15 @@ const MOCK_REVIEWS: Review[] = [
       lat: 3.1421,
       lng: 101.6867,
       address: 'Bukit Bintang'
-    }
+    },
+    status: 'approved',
+    votes: {
+      upvotes: 8,
+      downvotes: 1,
+      userVotes: {},
+    },
+    createdAt: '2024-02-24',
+    updatedAt: '2024-02-24',
   },
   {
     id: '3',
@@ -66,7 +67,15 @@ const MOCK_REVIEWS: Review[] = [
       lat: 3.1380,
       lng: 101.6871,
       address: 'Pavilion KL'
-    }
+    },
+    status: 'approved',
+    votes: {
+      upvotes: 15,
+      downvotes: 3,
+      userVotes: {},
+    },
+    createdAt: '2024-02-23',
+    updatedAt: '2024-02-23',
   },
 ];
 
@@ -75,44 +84,55 @@ const SORT_OPTIONS = [
   { value: 'date-desc', label: 'Newest First' },
   { value: 'date-asc', label: 'Oldest First' },
   { value: 'rating-desc', label: 'Highest Rating' },
-  { value: 'rating-asc', label: 'Lowest Rating' }
+  { value: 'rating-asc', label: 'Lowest Rating' },
+  { value: 'votes-desc', label: 'Most Helpful' },
 ];
 const RATING_FILTERS = [5, 4, 3, 2, 1];
 
 export function Reviews() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState('date-desc');
   const [showFilters, setShowFilters] = useState(false);
-  const [userLocation, setUserLocation] = useState<GeolocationPosition | null>(null);
+  const [reviews, setReviews] = useState(MOCK_REVIEWS);
 
-  // Get user's location
-  const getUserLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => setUserLocation(position),
-        (error) => console.error('Error getting location:', error)
-      );
-    }
-  };
+  const handleVote = async (reviewId: string, voteType: 'up' | 'down') => {
+    if (!user) return;
 
-  // Calculate distance between two points using Haversine formula
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+    setReviews(prev => prev.map(review => {
+      if (review.id !== reviewId) return review;
+
+      const currentVote = review.votes.userVotes[user.uid];
+      const newVotes = { ...review.votes };
+
+      // Remove previous vote if exists
+      if (currentVote) {
+        if (currentVote === 'up') newVotes.upvotes--;
+        if (currentVote === 'down') newVotes.downvotes--;
+      }
+
+      // Add new vote if different from current vote
+      if (currentVote !== voteType) {
+        if (voteType === 'up') newVotes.upvotes++;
+        if (voteType === 'down') newVotes.downvotes++;
+        newVotes.userVotes[user.uid] = voteType;
+      } else {
+        // If same vote, remove the vote
+        delete newVotes.userVotes[user.uid];
+      }
+
+      return {
+        ...review,
+        votes: newVotes,
+      };
+    }));
   };
 
   // Filter and sort reviews
   const filteredAndSortedReviews = useMemo(() => {
-    return MOCK_REVIEWS
+    return reviews
       .filter(review => {
         const matchesSearch = 
           review.shopName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -121,36 +141,27 @@ export function Reviews() {
         
         const matchesCategory = selectedCategory === 'All' || review.category === selectedCategory;
         const matchesRating = !selectedRating || Math.floor(review.rating) === selectedRating;
+        const isApproved = review.status === 'approved';
         
-        return matchesSearch && matchesCategory && matchesRating;
+        return matchesSearch && matchesCategory && matchesRating && isApproved;
       })
       .sort((a, b) => {
         switch (sortBy) {
           case 'date-desc':
-            return new Date(b.date).getTime() - new Date(a.date).getTime();
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
           case 'date-asc':
-            return new Date(a.date).getTime() - new Date(b.date).getTime();
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           case 'rating-desc':
             return b.rating - a.rating;
           case 'rating-asc':
             return a.rating - b.rating;
+          case 'votes-desc':
+            return (b.votes.upvotes - b.votes.downvotes) - (a.votes.upvotes - a.votes.downvotes);
           default:
             return 0;
         }
-      })
-      .map(review => {
-        if (userLocation && review.location) {
-          const distance = calculateDistance(
-            userLocation.coords.latitude,
-            userLocation.coords.longitude,
-            review.location.lat,
-            review.location.lng
-          );
-          return { ...review, distance };
-        }
-        return review;
       });
-  }, [searchTerm, selectedCategory, selectedRating, sortBy, userLocation]);
+  }, [searchTerm, selectedCategory, selectedRating, sortBy, reviews]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -193,7 +204,7 @@ export function Reviews() {
               </button>
             </div>
             
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {/* Category Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Category</label>
@@ -240,25 +251,14 @@ export function Reviews() {
                   ))}
                 </select>
               </div>
-
-              {/* Location Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Location</label>
-                <button
-                  onClick={getUserLocation}
-                  className="w-full rounded-lg border px-3 py-2 text-sm hover:bg-accent"
-                >
-                  {userLocation ? 'Update Location' : 'Use My Location'}
-                </button>
-              </div>
             </div>
           </div>
         )}
 
         {/* Reviews Grid */}
         <div className="grid gap-6">
-          {filteredAndSortedReviews.map(review => (
-            <div key={review.id} className="rounded-xl border bg-card p-6 hover:bg-accent/50 transition-colors">
+          {filteredAndSortedReviews.map((review) => (
+            <div key={review.id} className="rounded-xl border bg-card p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-semibold">{review.shopName}</h2>
@@ -269,22 +269,22 @@ export function Reviews() {
                     <Star className="h-5 w-5 fill-primary text-primary" />
                     <span className="ml-1 font-medium">{review.rating}</span>
                   </div>
-                  {review.distance && (
-                    <span className="text-sm text-muted-foreground">
-                      {review.distance.toFixed(1)} km away
-                    </span>
-                  )}
                 </div>
               </div>
               <p className="mt-4 text-muted-foreground">{review.content}</p>
-              <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-muted-foreground">
-                <span>By {review.userName}</span>
-                <div className="flex items-center gap-4">
-                  {review.location && (
-                    <span>{review.location.address}</span>
-                  )}
-                  <span>{new Date(review.date).toLocaleDateString()}</span>
+              <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="font-medium">{review.userName}</span>
+                  <span>•</span>
+                  <span>{new Date(review.createdAt).toLocaleDateString()}</span>
+                  <span>•</span>
+                  <span>{review.location.address}</span>
                 </div>
+                <VoteButton
+                  reviewId={review.id}
+                  votes={review.votes}
+                  onVote={(type) => handleVote(review.id, type)}
+                />
               </div>
             </div>
           ))}

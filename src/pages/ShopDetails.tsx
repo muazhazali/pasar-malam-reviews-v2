@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { MapPin, Star, Clock, Phone, Globe } from 'lucide-react';
 import { ShopMap } from '@/components/Map/ShopMap';
 import { ReviewDialog } from '@/components/ReviewDialog';
+import { VoteButton } from '@/components/VoteButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { Shop } from '@/types/shop';
 import { Review } from '@/types/review';
@@ -39,8 +40,12 @@ const MOCK_REVIEWS: Review[] = [
     userName: 'John Doe',
     rating: 5,
     content: 'Amazing food and great service! The traditional flavors are perfectly preserved while adding a modern touch. Must try their signature dishes.',
-    photos: ['https://images.unsplash.com/photo-1546069901-ba9599a7e63c'],
     status: 'approved',
+    votes: {
+      upvotes: 12,
+      downvotes: 2,
+      userVotes: {},
+    },
     createdAt: '2024-02-25',
     updatedAt: '2024-02-25',
   },
@@ -51,8 +56,12 @@ const MOCK_REVIEWS: Review[] = [
     userName: 'Jane Smith',
     rating: 4,
     content: 'Good food and nice ambiance. The prices are reasonable for the quality you get. Would recommend trying their special dishes.',
-    photos: [],
     status: 'approved',
+    votes: {
+      upvotes: 8,
+      downvotes: 1,
+      userVotes: {},
+    },
     createdAt: '2024-02-24',
     updatedAt: '2024-02-24',
   },
@@ -68,11 +77,9 @@ export function ShopDetails() {
   // In a real app, we would fetch the shop data based on the ID
   const shop = MOCK_SHOP;
 
-  // In a real app, this would upload photos to storage and save review to database
   const handleReviewSubmit = async (review: {
     rating: number;
     content: string;
-    photos: File[];
   }) => {
     if (!user) return;
 
@@ -85,14 +92,50 @@ export function ShopDetails() {
       userPhotoURL: user.photoURL || undefined,
       rating: review.rating,
       content: review.content,
-      photos: [], // In a real app, we would upload photos and get their URLs
       status: 'pending',
+      votes: {
+        upvotes: 0,
+        downvotes: 0,
+        userVotes: {},
+      },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     // In a real app, this would be handled by the backend
     setReviews(prev => [newReview, ...prev]);
+  };
+
+  const handleVote = async (reviewId: string, voteType: 'up' | 'down') => {
+    if (!user) return;
+
+    setReviews(prev => prev.map(review => {
+      if (review.id !== reviewId) return review;
+
+      const currentVote = review.votes.userVotes[user.uid];
+      const newVotes = { ...review.votes };
+
+      // Remove previous vote if exists
+      if (currentVote) {
+        if (currentVote === 'up') newVotes.upvotes--;
+        if (currentVote === 'down') newVotes.downvotes--;
+      }
+
+      // Add new vote if different from current vote
+      if (currentVote !== voteType) {
+        if (voteType === 'up') newVotes.upvotes++;
+        if (voteType === 'down') newVotes.downvotes++;
+        newVotes.userVotes[user.uid] = voteType;
+      } else {
+        // If same vote, remove the vote
+        delete newVotes.userVotes[user.uid];
+      }
+
+      return {
+        ...review,
+        votes: newVotes,
+      };
+    }));
   };
 
   const approvedReviews = reviews.filter(review => review.status === 'approved');
@@ -207,17 +250,13 @@ export function ShopDetails() {
                   </div>
                 </div>
                 <p className="mt-4 text-muted-foreground">{review.content}</p>
-                {review.photos && review.photos.length > 0 && (
-                  <div className="mt-4 flex gap-4">
-                    {review.photos.map((photo, index) => (
-                      <div key={index} className="aspect-square w-24 overflow-hidden rounded-lg border">
-                        <img src={photo} alt={`Review photo ${index + 1}`} className="h-full w-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="mt-4 text-sm text-muted-foreground">
-                  {new Date(review.createdAt).toLocaleDateString()}
+                <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+                  <span>{new Date(review.createdAt).toLocaleDateString()}</span>
+                  <VoteButton
+                    reviewId={review.id}
+                    votes={review.votes}
+                    onVote={(type) => handleVote(review.id, type)}
+                  />
                 </div>
               </div>
             ))}

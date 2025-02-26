@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Star, Upload, X } from 'lucide-react';
+import { useState } from 'react';
+import { Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ReviewFormProps {
@@ -7,7 +7,6 @@ interface ReviewFormProps {
   onSubmit: (review: {
     rating: number;
     content: string;
-    photos: File[];
   }) => Promise<void>;
   onCancel: () => void;
 }
@@ -17,35 +16,7 @@ export function ReviewForm({ shopId, onSubmit, onCancel }: ReviewFormProps) {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [content, setContent] = useState('');
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length + photos.length > 4) {
-      alert('You can only upload up to 4 photos');
-      return;
-    }
-
-    const newPhotos = [...photos, ...files];
-    setPhotos(newPhotos);
-
-    // Create preview URLs
-    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
-    setPhotoPreviewUrls([...photoPreviewUrls, ...newPreviewUrls]);
-  };
-
-  const removePhoto = (index: number) => {
-    const newPhotos = photos.filter((_, i) => i !== index);
-    setPhotos(newPhotos);
-
-    // Revoke the old URL and remove it
-    URL.revokeObjectURL(photoPreviewUrls[index]);
-    const newPreviewUrls = photoPreviewUrls.filter((_, i) => i !== index);
-    setPhotoPreviewUrls(newPreviewUrls);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,10 +38,7 @@ export function ReviewForm({ shopId, onSubmit, onCancel }: ReviewFormProps) {
       await onSubmit({
         rating,
         content: content.trim(),
-        photos,
       });
-      // Clean up preview URLs
-      photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
     } catch (error) {
       console.error('Error submitting review:', error);
       alert('Failed to submit review. Please try again.');
@@ -122,49 +90,6 @@ export function ReviewForm({ shopId, onSubmit, onCancel }: ReviewFormProps) {
         <div className="text-xs text-muted-foreground">
           {content.length}/1000 characters
         </div>
-      </div>
-
-      {/* Photo Upload */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Photos (optional)</label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {photoPreviewUrls.map((url, index) => (
-            <div key={index} className="relative aspect-square">
-              <img
-                src={url}
-                alt={`Review photo ${index + 1}`}
-                className="h-full w-full rounded-lg border object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => removePhoto(index)}
-                className="absolute -right-2 -top-2 rounded-full bg-background p-1 shadow-sm border hover:bg-accent"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-          {photos.length < 4 && (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="aspect-square rounded-lg border border-dashed flex items-center justify-center hover:bg-accent"
-            >
-              <Upload className="h-6 w-6 text-muted-foreground" />
-            </button>
-          )}
-        </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={handlePhotoChange}
-        />
-        <p className="text-xs text-muted-foreground">
-          You can upload up to 4 photos (max 5MB each)
-        </p>
       </div>
 
       {/* Submit Buttons */}
