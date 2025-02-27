@@ -2,55 +2,28 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReviewForm } from '@/components/ReviewForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { Shop } from '@/types/shop';
-
-// Using the mock shops data for now
-const MOCK_SHOPS: Shop[] = [
-  {
-    id: '1',
-    name: 'Delicious Corner',
-    description: 'Traditional street food with a modern twist.',
-    category: 'Food',
-    coordinates: [3.1390, 101.6869],
-    address: '123 Jalan Example, Kuala Lumpur',
-    rating: 4.5,
-    reviewCount: 128,
-    verified: true,
-    createdAt: '2024-02-25',
-    updatedAt: '2024-02-25',
-  },
-  {
-    id: '2',
-    name: 'Fashion Hub',
-    description: 'Trendy clothing and accessories.',
-    category: 'Fashion',
-    coordinates: [3.1421, 101.6867],
-    address: '456 Jalan Sample, Kuala Lumpur',
-    rating: 4.2,
-    reviewCount: 85,
-    verified: true,
-    createdAt: '2024-02-24',
-    updatedAt: '2024-02-24',
-  },
-  {
-    id: '3',
-    name: 'Tech Zone',
-    description: 'Latest gadgets and electronics.',
-    category: 'Electronics',
-    coordinates: [3.1380, 101.6871],
-    address: '789 Jalan Test, Kuala Lumpur',
-    rating: 4.7,
-    reviewCount: 156,
-    verified: true,
-    createdAt: '2024-02-23',
-    updatedAt: '2024-02-23',
-  },
-];
+import { getShops } from '@/lib/services/shops';
+import { createReview } from '@/lib/services/reviews';
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 export function WriteReview() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedShopId, setSelectedShopId] = useState<string>('');
+
+  // Fetch shops
+  const { data: shops = [], isLoading } = useQuery({
+    queryKey: ['shops'],
+    queryFn: getShops,
+  });
+
+  // Create review mutation
+  const reviewMutation = useMutation({
+    mutationFn: createReview,
+    onSuccess: (data) => {
+      navigate(`/shops/${data.shop_id}`);
+    },
+  });
 
   // Redirect to login if not authenticated
   if (!user) {
@@ -72,24 +45,25 @@ export function WriteReview() {
     );
   }
 
-  const selectedShop = MOCK_SHOPS.find(shop => shop.id === selectedShopId);
+  const selectedShop = shops.find(shop => shop.id === selectedShopId);
 
-  const handleSubmit = async (review: { rating: number; content: string }) => {
-    if (!user) {
-      alert('Please sign in to submit a review');
-      return;
-    }
+  const handleSubmit = async (rating: number, content: string) => {
+    if (!selectedShopId) return;
 
     try {
-      // Add your review submission logic here
-      console.log('Submitting review:', review);
-      
-      // Navigate back to the shop's page or reviews page
-      navigate(selectedShopId ? `/shops/${selectedShopId}` : '/reviews');
+      await reviewMutation.mutate({
+        shop_id: selectedShopId,
+        rating,
+        content,
+      });
     } catch (error) {
       console.error('Error submitting review:', error);
     }
   };
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading shops...</div>;
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -111,7 +85,7 @@ export function WriteReview() {
             required
           >
             <option value="">Choose a shop...</option>
-            {MOCK_SHOPS.map(shop => (
+            {shops.map(shop => (
               <option key={shop.id} value={shop.id}>
                 {shop.name} - {shop.category}
               </option>
@@ -133,7 +107,7 @@ export function WriteReview() {
           <ReviewForm
             shopId={selectedShopId}
             onSubmit={handleSubmit}
-            onCancel={() => navigate('/shops')}
+            isSubmitting={reviewMutation.isPending}
           />
         </div>
       </div>

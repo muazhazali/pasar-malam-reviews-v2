@@ -3,47 +3,8 @@ import { Star } from 'lucide-react';
 import { VoteButton } from '@/components/VoteButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { Review } from '@/types/review';
-
-const MOCK_REVIEWS: Review[] = [
-  {
-    id: '1',
-    shopId: '1',
-    shopName: 'Delicious Corner',
-    category: 'Food',
-    userId: 'user1',
-    userName: 'John Doe',
-    userPhotoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-    rating: 5,
-    content: 'Amazing food and great service! The nasi lemak was perfect.',
-    status: 'approved',
-    votes: {
-      upvotes: 12,
-      downvotes: 2,
-      userVotes: {},
-    },
-    createdAt: '2024-02-25T10:00:00Z',
-    updatedAt: '2024-02-25T10:00:00Z',
-  },
-  {
-    id: '2',
-    shopId: '2',
-    shopName: 'Street Wok',
-    category: 'Food',
-    userId: 'user2',
-    userName: 'Jane Smith',
-    userPhotoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
-    rating: 4,
-    content: 'Good char kway teow but could be spicier.',
-    status: 'approved',
-    votes: {
-      upvotes: 8,
-      downvotes: 1,
-      userVotes: {},
-    },
-    createdAt: '2024-02-24T15:30:00Z',
-    updatedAt: '2024-02-24T15:30:00Z',
-  },
-];
+import { getReviews, voteReview } from '@/lib/services/reviews';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const CATEGORIES = ['All', 'Food', 'Fashion', 'Electronics'];
 const SORT_OPTIONS = [
@@ -57,51 +18,41 @@ const RATING_FILTERS = [5, 4, 3, 2, 1];
 
 export function Reviews() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState('date-desc');
   const [showFilters, setShowFilters] = useState(false);
-  const [reviews, setReviews] = useState(MOCK_REVIEWS);
+
+  // Fetch reviews
+  const { data: reviews = [], isLoading } = useQuery({
+    queryKey: ['reviews'],
+    queryFn: () => getReviews(),
+  });
+
+  // Vote mutation
+  const voteMutation = useMutation({
+    mutationFn: ({ reviewId, voteType }: { reviewId: string; voteType: 'up' | 'down' }) =>
+      voteReview(reviewId, voteType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+    },
+  });
 
   const handleVote = async (reviewId: string, voteType: 'up' | 'down') => {
     if (!user) return;
-
-    setReviews(prev => prev.map(review => {
-      if (review.id !== reviewId) return review;
-
-      const currentVote = review.votes.userVotes[user.uid];
-      const newVotes = { ...review.votes };
-
-      if (currentVote) {
-        if (currentVote === 'up') newVotes.upvotes--;
-        if (currentVote === 'down') newVotes.downvotes--;
-      }
-
-      if (currentVote !== voteType) {
-        if (voteType === 'up') newVotes.upvotes++;
-        if (voteType === 'down') newVotes.downvotes++;
-        newVotes.userVotes[user.uid] = voteType;
-      } else {
-        delete newVotes.userVotes[user.uid];
-      }
-
-      return {
-        ...review,
-        votes: newVotes,
-      };
-    }));
+    await voteMutation.mutate({ reviewId, voteType });
   };
 
   const filteredAndSortedReviews = useMemo(() => {
     return reviews
       .filter(review => {
         const matchesSearch = 
-          review.shopName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          review.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          review.userName.toLowerCase().includes(searchTerm.toLowerCase());
+          review.shops.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          review.content.toLowerCase().includes(searchTerm.toLowerCase());
         
-        const matchesCategory = selectedCategory === 'All' || review.category === selectedCategory;
+        const matchesCategory = selectedCategory === 'All' || review.shops.category === selectedCategory;
         const matchesRating = !selectedRating || Math.floor(review.rating) === selectedRating;
         const isApproved = review.status === 'approved';
         
@@ -110,15 +61,15 @@ export function Reviews() {
       .sort((a, b) => {
         switch (sortBy) {
           case 'date-desc':
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           case 'date-asc':
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           case 'rating-desc':
             return b.rating - a.rating;
           case 'rating-asc':
             return a.rating - b.rating;
           case 'votes-desc':
-            return (b.votes.upvotes - b.votes.downvotes) - (a.votes.upvotes - a.votes.downvotes);
+            return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
           default:
             return 0;
         }
@@ -208,67 +159,64 @@ export function Reviews() {
       </div>
 
       {/* Reviews list */}
-      <div className="space-y-6">
-        {filteredAndSortedReviews.map(review => (
-          <div
-            key={review.id}
-            className="rounded-lg border bg-card p-6 shadow-sm"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                {review.userPhotoURL && (
-                  <img
-                    src={review.userPhotoURL}
-                    alt={review.userName}
-                    className="h-10 w-10 rounded-full"
+      {isLoading ? (
+        <div className="text-center py-8">Loading reviews...</div>
+      ) : (
+        <div className="space-y-6">
+          {filteredAndSortedReviews.map(review => (
+            <div
+              key={review.id}
+              className="rounded-lg border bg-card p-6 shadow-sm"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <h3 className="font-medium">{review.user_id}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(review.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <VoteButton
+                    type="up"
+                    count={review.upvotes}
+                    userVote={review.review_votes?.[0]?.vote_type}
+                    onVote={() => handleVote(review.id, 'up')}
                   />
-                )}
-                <div>
-                  <h3 className="font-medium">{review.userName}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(review.createdAt).toLocaleDateString()}
-                  </p>
+                  <VoteButton
+                    type="down"
+                    count={review.downvotes}
+                    userVote={review.review_votes?.[0]?.vote_type}
+                    onVote={() => handleVote(review.id, 'down')}
+                  />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <VoteButton
-                  type="up"
-                  count={review.votes.upvotes}
-                  userVote={user ? review.votes.userVotes[user.uid] : undefined}
-                  onVote={() => handleVote(review.id, 'up')}
-                />
-                <VoteButton
-                  type="down"
-                  count={review.votes.downvotes}
-                  userVote={user ? review.votes.userVotes[user.uid] : undefined}
-                  onVote={() => handleVote(review.id, 'down')}
-                />
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{review.shopName}</span>
-                <span>•</span>
-                <span>{review.category}</span>
-                <span>•</span>
-                <div className="flex items-center">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <span
-                      key={i}
-                      className={`text-sm ${
-                        i < review.rating ? 'text-yellow-400' : 'text-gray-300'
-                      }`}
-                    >
-                      ★
-                    </span>
-                  ))}
+              <div className="mt-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>{review.shops.name}</span>
+                  <span>•</span>
+                  <span>{review.shops.category}</span>
+                  <span>•</span>
+                  <div className="flex items-center">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`text-sm ${
+                          i < review.rating ? 'text-yellow-400' : 'text-gray-300'
+                        }`}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
                 </div>
+                <p className="mt-2">{review.content}</p>
               </div>
-              <p className="mt-2">{review.content}</p>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 } 

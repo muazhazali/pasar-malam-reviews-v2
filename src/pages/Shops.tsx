@@ -1,206 +1,235 @@
 import { useState } from 'react';
-import { Shop } from '@/types/shop';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, Star, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { ShopMap } from '@/components/Map/ShopMap';
-import { Link } from 'react-router-dom';
-import { ArrowRight, Star, Search, SlidersHorizontal, X } from 'lucide-react';
-
-const MOCK_SHOPS: Shop[] = [
-  {
-    id: '1',
-    name: 'Delicious Corner',
-    description: 'Traditional street food with a modern twist.',
-    category: 'Food',
-    coordinates: [3.1390, 101.6869], // KL city center
-    address: 'Kuala Lumpur City Centre',
-    rating: 4.5,
-    reviewCount: 128,
-    verified: true,
-    createdAt: '2024-02-25',
-    updatedAt: '2024-02-25',
-  },
-  {
-    id: '2',
-    name: 'Fashion Hub',
-    description: 'Trendy clothing and accessories.',
-    category: 'Fashion',
-    coordinates: [3.1421, 101.6867], // Near KL city center
-    address: 'Bukit Bintang',
-    rating: 4.2,
-    reviewCount: 85,
-    verified: true,
-    createdAt: '2024-02-24',
-    updatedAt: '2024-02-24',
-  },
-  {
-    id: '3',
-    name: 'Tech Zone',
-    description: 'Latest gadgets and electronics.',
-    category: 'Electronics',
-    coordinates: [3.1380, 101.6871], // Also near KL city center
-    address: 'Pavilion KL',
-    rating: 4.7,
-    reviewCount: 156,
-    verified: true,
-    createdAt: '2024-02-23',
-    updatedAt: '2024-02-23',
-  },
-];
+import { getShops, getShopsByCategory, getShopsByTag, searchShops, getAllTags } from '@/lib/services/shops';
+import { useQuery } from '@tanstack/react-query';
+import type { ShopTag } from '@/types/shop';
+import { Button } from '@/components/ui/button';
 
 const CATEGORIES = ['All', 'Food', 'Fashion', 'Electronics'];
-const LOCATIONS = ['All', ...Array.from(new Set(MOCK_SHOPS.map(shop => shop.address)))];
 
 export function Shops() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [selectedLocation, setSelectedLocation] = useState<string>('All');
-  const [showFilters, setShowFilters] = useState(false);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([3.1390, 101.6869]); // Default to KL center
-  const [mapZoom, setMapZoom] = useState(12);
+  const navigate = useNavigate();
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedTag, setSelectedTag] = useState<ShopTag | ''>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [mapCenter] = useState<[number, number]>([3.1390, 101.6869]); // KL coordinates
 
-  const filteredShops = MOCK_SHOPS.filter(shop => {
-    const matchesSearch = 
-      shop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      shop.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCategory = selectedCategory === 'All' || shop.category === selectedCategory;
-    const matchesLocation = selectedLocation === 'All' || shop.address === selectedLocation;
-
-    return matchesSearch && matchesCategory && matchesLocation;
+  // Fetch all available tags
+  const { data: tags = [] } = useQuery({
+    queryKey: ['tags'],
+    queryFn: getAllTags,
   });
 
-  // Update map center when location is selected
-  const handleLocationChange = (location: string) => {
-    setSelectedLocation(location);
-    if (location !== 'All') {
-      const selectedShop = MOCK_SHOPS.find(shop => shop.address === location);
-      if (selectedShop) {
-        setMapCenter(selectedShop.coordinates);
-        setMapZoom(15);
+  // Fetch shops based on filters
+  const { data: shops = [], isLoading } = useQuery({
+    queryKey: ['shops', selectedCategory, selectedTag, searchQuery],
+    queryFn: async () => {
+      if (searchQuery) {
+        return searchShops(searchQuery);
       }
-    } else {
-      setMapCenter([3.1390, 101.6869]); // Reset to KL center
-      setMapZoom(12);
-    }
+      if (selectedTag) {
+        return getShopsByTag(selectedTag);
+      }
+      return selectedCategory === 'All' ? getShops() : getShopsByCategory(selectedCategory);
+    },
+  });
+
+  const handleShopClick = (shopId: string) => {
+    navigate(`/shops/${shopId}`);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // The search will be triggered by the query hook
+  };
+
+  const clearFilters = () => {
+    setSelectedCategory('All');
+    setSelectedTag('');
+    setSearchQuery('');
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-      <div className="space-y-8">
-        {/* Header and Search */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">Shops</h1>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
+    <div className="container mx-auto py-8">
+      <div className="mb-8 space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Explore Shops</h1>
+          <Button
+            variant="ghost"
+            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+            className="flex items-center gap-2"
+          >
+            Filters
+            {isFiltersOpen ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+
+        {isFiltersOpen && (
+          <div className="rounded-xl border bg-card p-4 space-y-4">
+            {/* Search Form */}
+            <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search shops..."
-                className="w-full min-w-[200px] rounded-md border pl-9 pr-4 py-2"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border bg-background pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
-            </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-accent"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filters
-            </button>
-          </div>
-        </div>
+            </form>
 
-        {/* Filters Panel */}
-        {showFilters && (
-          <div className="rounded-lg border bg-card p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Filters</h2>
-              <button
-                onClick={() => setShowFilters(false)}
-                className="rounded-full p-1 hover:bg-accent"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            
-            <div className="grid gap-4 sm:grid-cols-2">
-              {/* Category Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Category</label>
-                <select
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                  {CATEGORIES.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Location Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Location</label>
-                <select
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                  value={selectedLocation}
-                  onChange={(e) => handleLocationChange(e.target.value)}
-                >
-                  {LOCATIONS.map(location => (
-                    <option key={location} value={location}>{location}</option>
-                  ))}
-                </select>
+            {/* Categories */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Categories</label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => {
+                      setSelectedCategory(category);
+                      setSelectedTag('');
+                    }}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      selectedCategory === category
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Map */}
-        <div className="h-[400px] w-full rounded-lg border overflow-hidden">
-          <ShopMap 
-            shops={filteredShops} 
-            center={mapCenter}
-            zoom={mapZoom}
-          />
-        </div>
-
-        {/* Shop Cards */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredShops.map(shop => (
-            <div
-              key={shop.id}
-              className="group rounded-xl border bg-card p-6 transition-all hover:bg-accent/50 hover:shadow-md"
-            >
-              <h2 className="text-xl font-semibold group-hover:text-primary">{shop.name}</h2>
-              <p className="mt-2 text-muted-foreground">{shop.description}</p>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{shop.category}</span>
-                <div className="flex items-center space-x-2">
-                  <Star className="h-4 w-4 fill-primary text-primary" />
-                  <span className="font-medium">{shop.rating}</span>
-                  <span className="text-sm text-muted-foreground">({shop.reviewCount} reviews)</span>
-                </div>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{shop.address}</p>
-              <div className="mt-6 flex justify-end">
-                <Link
-                  to={`/shops/${shop.id}`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  View Details
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+            {/* Tags */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Tags</label>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => {
+                      setSelectedTag(selectedTag === tag ? '' : tag);
+                      setSelectedCategory('All');
+                    }}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      selectedTag === tag
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
 
-        {filteredShops.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-lg text-muted-foreground">No shops found matching your criteria.</p>
+            {/* Clear Filters */}
+            {(selectedCategory !== 'All' || selectedTag || searchQuery) && (
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={clearFilters}>
+                  Clear Filters
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {isLoading ? (
+        <div className="text-center py-8">Loading shops...</div>
+      ) : (
+        <div className="grid gap-8 lg:grid-cols-2">
+          {/* Map Section - Now in a container that's responsive */}
+          <div className="order-2 lg:order-1">
+            <div className="h-[300px] lg:h-[calc(100vh-16rem)] lg:sticky lg:top-24 rounded-xl border overflow-hidden">
+              <ShopMap
+                shops={shops}
+                center={mapCenter}
+                onMarkerClick={handleShopClick}
+              />
+            </div>
+          </div>
+
+          {/* Shops List - Now appears first on mobile */}
+          <div className="order-1 lg:order-2 space-y-4">
+            {shops.map((shop) => (
+              <div
+                key={shop.id}
+                onClick={() => handleShopClick(shop.id)}
+                className="group cursor-pointer rounded-xl border bg-card p-4 transition-colors hover:bg-accent"
+              >
+                <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold group-hover:text-primary">
+                        {shop.name}
+                      </h3>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Star className="h-4 w-4 fill-primary text-primary" />
+                        <span>{shop.rating}</span>
+                        <span className="text-muted-foreground">
+                          ({shop.review_count})
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {shop.description}
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <span className="line-clamp-1">{shop.address}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                        {shop.category}
+                      </span>
+                      {shop.verified && (
+                        <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-600">
+                          Verified
+                        </span>
+                      )}
+                      {shop.tags?.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {shop.photos && shop.photos.length > 0 && (
+                    <div className="aspect-square w-24 overflow-hidden rounded-lg">
+                      <img
+                        src={shop.photos[0]}
+                        alt={shop.name}
+                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {shops.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  No shops found with the current filters.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

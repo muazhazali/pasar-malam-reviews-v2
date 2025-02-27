@@ -1,48 +1,60 @@
-import * as Dialog from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
-import { ReviewForm } from './ReviewForm';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ReviewForm } from '@/components/ReviewForm';
+import { createReview } from '@/lib/services/reviews';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface ReviewDialogProps {
   shopId: string;
   shopName: string;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (review: {
-    rating: number;
-    content: string;
-  }) => Promise<void>;
 }
 
-export function ReviewDialog({ shopId, shopName, isOpen, onClose, onSubmit }: ReviewDialogProps) {
-  const handleSubmit = async (review: {
-    rating: number;
-    content: string;
-  }) => {
-    try {
-      await onSubmit(review);
+export function ReviewDialog({ shopId, shopName, isOpen, onClose }: ReviewDialogProps) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+
+  const reviewMutation = useMutation({
+    mutationFn: createReview,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
       onClose();
+    },
+    onError: (error: Error) => {
+      setError(error.message);
+    },
+  });
+
+  const handleSubmit = async (rating: number, content: string) => {
+    try {
+      await reviewMutation.mutate({
+        shop_id: shopId,
+        rating,
+        content,
+      });
     } catch (error) {
       console.error('Error submitting review:', error);
     }
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <Dialog.Title className="text-lg font-medium">Write a Review for {shopName}</Dialog.Title>
-            <Dialog.Close className="rounded-full p-1.5 hover:bg-gray-100">
-              <X className="h-4 w-4" />
-            </Dialog.Close>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Write a Review for {shopName}</DialogTitle>
+        </DialogHeader>
+        {error && (
+          <div className="bg-red-50 text-red-500 p-3 rounded-md mb-4">
+            {error}
           </div>
-
-          <div className="mt-4">
-            <ReviewForm shopId={shopId} onSubmit={handleSubmit} onCancel={onClose} />
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        )}
+        <ReviewForm
+          shopId={shopId}
+          onSubmit={handleSubmit}
+          isSubmitting={reviewMutation.isPending}
+        />
+      </DialogContent>
+    </Dialog>
   );
 } 
