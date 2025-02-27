@@ -51,7 +51,6 @@ export function WriteReview() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedShopId, setSelectedShopId] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect to login if not authenticated
   if (!user) {
@@ -82,7 +81,6 @@ export function WriteReview() {
     }
 
     try {
-      setIsSubmitting(true);
       // Add your review submission logic here
       console.log('Submitting review:', review);
       
@@ -90,8 +88,6 @@ export function WriteReview() {
       navigate(selectedShopId ? `/shops/${selectedShopId}` : '/reviews');
     } catch (error) {
       console.error('Error submitting review:', error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { MapPin, Star, Clock, Phone, Globe } from 'lucide-react';
 import { ShopMap } from '@/components/Map/ShopMap';
 import { ReviewDialog } from '@/components/ReviewDialog';
@@ -72,7 +71,6 @@ const MOCK_REVIEWS: Review[] = [
 ];
 
 export function ShopDetails() {
-  const { id } = useParams();
   const { user } = useAuth();
   const [selectedPhoto, setSelectedPhoto] = useState(0);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
@@ -86,12 +84,12 @@ export function ShopDetails() {
 
     const newReview: Review = {
       id: Math.random().toString(),
-      shopId: '1',
-      shopName: 'Delicious Corner',
-      category: 'Food',
+      shopId: shop.id,
+      shopName: shop.name,
+      category: shop.category,
       userId: user.uid,
       userName: user.displayName || 'Anonymous',
-      userPhotoURL: user.photoURL,
+      userPhotoURL: user.photoURL || undefined,
       rating: review.rating,
       content: review.content,
       status: 'pending',
@@ -248,13 +246,13 @@ export function ShopDetails() {
                       type="up"
                       count={review.votes.upvotes}
                       userVote={user ? review.votes.userVotes[user.uid] : undefined}
-                      onVote={(type) => handleVote(type, review.id)}
+                      onVote={() => handleVote('up', review.id)}
                     />
                     <VoteButton
                       type="down"
                       count={review.votes.downvotes}
                       userVote={user ? review.votes.userVotes[user.uid] : undefined}
-                      onVote={(type) => handleVote(type, review.id)}
+                      onVote={() => handleVote('down', review.id)}
                     />
                   </div>
                 </div>
@@ -288,4 +286,4 @@ export function ShopDetails() {
       />
     </div>
   );
-} 
+}

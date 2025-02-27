@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Star } from 'lucide-react';
 
 interface ReviewFormProps {
+  shopId: string;
   onSubmit: (review: {
     rating: number;
     content: string;
@@ -9,7 +10,7 @@ interface ReviewFormProps {
   onCancel: () => void;
 }
 
-export function ReviewForm({ onSubmit, onCancel }: ReviewFormProps) {
+export function ReviewForm({ shopId, onSubmit, onCancel }: ReviewFormProps) {
   const [rating, setRating] = useState(0);
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
