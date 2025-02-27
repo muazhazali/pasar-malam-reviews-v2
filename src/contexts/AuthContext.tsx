@@ -1,15 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { 
-  User,
-  GoogleAuthProvider, 
-  signInWithPopup,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { checkIsAdmin } from '@/lib/admin';
+import { User } from '@supabase/supabase-js';
+import { supabase, signInWithGoogle as supabaseSignInWithGoogle, signInWithEmail as supabaseSignInWithEmail, signOut as supabaseSignOut, createUserWithEmail as supabaseCreateUserWithEmail } from '@/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -37,24 +28,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        const adminStatus = await checkIsAdmin(user.uid);
-        setIsAdmin(adminStatus);
-      } else {
-        setIsAdmin(false);
-      }
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return unsubscribe;
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  // Check admin status whenever user changes
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) throw error;
+        setIsAdmin(!!data);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
+
   const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await supabaseSignInWithGoogle();
     } catch (error) {
       console.error('Error signing in with Google:', error);
       throw error;
@@ -63,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await supabaseSignInWithEmail(email, password);
     } catch (error) {
       console.error('Error signing in with email:', error);
       throw error;
@@ -72,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const createUserWithEmail = async (email: string, password: string) => {
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await supabaseCreateUserWithEmail(email, password);
     } catch (error) {
       console.error('Error creating user:', error);
       throw error;
@@ -81,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth);
+      await supabaseSignOut();
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;
