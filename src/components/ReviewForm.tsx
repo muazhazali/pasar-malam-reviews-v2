@@ -17,7 +17,7 @@ export function ReviewForm({ shopId, onSubmit, onCancel }: ReviewFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting || !shopId) return;
 
     try {
       setIsSubmitting(true);
@@ -82,7 +82,7 @@ export function ReviewForm({ shopId, onSubmit, onCancel }: ReviewFormProps) {
         </button>
         <button
           type="submit"
-          disabled={isSubmitting || !rating || !content}
+          disabled={isSubmitting || !rating || !content || !shopId}
           className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50"
         >
           {isSubmitting ? 'Submitting...' : 'Submit Review'}

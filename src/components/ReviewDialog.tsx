@@ -39,7 +39,7 @@ export function ReviewDialog({ shopId, shopName, isOpen, onClose, onSubmit }: Re
           </div>
 
           <div className="mt-4">
-            <ReviewForm onSubmit={handleSubmit} onCancel={onClose} />
+            <ReviewForm shopId={shopId} onSubmit={handleSubmit} onCancel={onClose} />
           </div>
         </Dialog.Content>
       </Dialog.Portal>
